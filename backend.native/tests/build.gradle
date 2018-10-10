@@ -162,9 +162,8 @@ TaskCollection<KonanTest> tasksOf(Closure<Boolean> filter) {
             .matching { filter(it) && it.enabled && (prefix != null ? it.name.startsWith(prefix) : true) }
 }
 
-run {
-    def tasks = tasksOf { it instanceof KonanTest && it.inDevelopersRun }
-    dependsOn(tasks)
+task smallTest {
+    dependsOn(tasksOf { it instanceof KonanTest && it.inDevelopersRun })
     dependsOn(project.tasks.withType(KonanLocalTestRunner))
     // Add framework tests
     dependsOn(project.tasks.withType(FrameworkTest))
@@ -3210,7 +3209,6 @@ task runKonanRegexTests(type: KonanStdlibTestRunner) {
     testLogger = RunnerLogger.GTEST
 
     dependsOn compileKonanHarmonyRegexTest
-    runHarmonyRegexTest.group = "other"
     finalizedBy resultsTask
 }
 
@@ -3234,7 +3232,6 @@ task runStdlibTests(type: KonanStdlibTestRunner) {
     testLogger = RunnerLogger.GTEST
 
     dependsOn compileKonanStdlibTest
-    runStdlibTest.group = "other"
     finalizedBy resultsTask
 }
 
@@ -3264,6 +3261,5 @@ task buildKonanTests {
         }
     }
 
-    runLocalTest.group = "other"
     dependsOn compileKonanLocalTest
 }
