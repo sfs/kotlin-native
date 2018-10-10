@@ -3210,6 +3210,7 @@ task runKonanRegexTests(type: KonanStdlibTestRunner) {
     testLogger = RunnerLogger.GTEST
 
     dependsOn compileKonanHarmonyRegexTest
+    runHarmonyRegexTest.group = "other"
     finalizedBy resultsTask
 }
 
@@ -3233,6 +3234,7 @@ task runStdlibTests(type: KonanStdlibTestRunner) {
     testLogger = RunnerLogger.GTEST
 
     dependsOn compileKonanStdlibTest
+    runStdlibTest.group = "other"
     finalizedBy resultsTask
 }
 
@@ -3262,5 +3264,6 @@ task buildKonanTests {
         }
     }
 
+    runLocalTest.group = "other"
     dependsOn compileKonanLocalTest
 }
