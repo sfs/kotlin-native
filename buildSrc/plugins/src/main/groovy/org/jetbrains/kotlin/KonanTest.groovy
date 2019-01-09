@@ -670,7 +670,6 @@ fun runTest() {
             if (!findLinesWithPrefixesRemoved(text, "// JVM_TARGET:").isEmpty()) { return false }
             return true
         }
-
     }
 
     @Override
