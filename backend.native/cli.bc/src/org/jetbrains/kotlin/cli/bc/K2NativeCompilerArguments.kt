@@ -162,6 +162,16 @@ class K2NativeCompilerArguments : CommonCompilerArguments() {
     @Argument(value = "-Xdebug-info-version", description = "generate debug info of given version (1, 2)")
     var debugInfoFormatVersion: String = "1" /* command line parser doesn't accept kotlin.Int type */
 
+    @Argument(value = "-Xcoverage", description = "emit coverage")
+    var coverage: Boolean = false
+
+    @Argument(
+            value = "-Xlibrary-to-cover",
+            valueDescription = "<path>",
+            description = "Path to library that should be covered. If no library is provided then compiler output is profiled instead."
+    )
+    var coveredLibraries: Array<String>? = null
+
     override fun configureAnalysisFlags(collector: MessageCollector): MutableMap<AnalysisFlag<*>, Any> =
             super.configureAnalysisFlags(collector).also {
                 val useExperimental = it[AnalysisFlags.useExperimental] as List<*>

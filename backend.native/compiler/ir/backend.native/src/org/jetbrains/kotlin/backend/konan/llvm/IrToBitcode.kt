@@ -13,13 +13,13 @@ import org.jetbrains.kotlin.backend.konan.*
 import org.jetbrains.kotlin.backend.konan.descriptors.*
 import org.jetbrains.kotlin.backend.konan.ir.*
 import org.jetbrains.kotlin.backend.konan.irasdescriptors.*
+import org.jetbrains.kotlin.backend.konan.llvm.coverage.*
 import org.jetbrains.kotlin.backend.konan.objcexport.ObjCExport
 import org.jetbrains.kotlin.backend.konan.optimizations.*
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.builtins.UnsignedType
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
-import org.jetbrains.kotlin.descriptors.konan.CurrentKonanModuleOrigin
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
@@ -310,6 +310,8 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
     override fun visitModuleFragment(declaration: IrModuleFragment) {
         context.log{"visitModule                    : ${ir2string(declaration)}"}
 
+        context.coverage.collectRegions(declaration)
+
         initializeCachedBoxes(context)
         declaration.acceptChildrenVoid(this)
 
@@ -319,7 +321,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         codegen.objCDataGenerator?.finishModule()
 
         BitcodeEmbedding.processModule(context.llvm)
-
+        context.coverage.writeRegionInfo()
         appendDebugSelector()
         appendLlvmUsed("llvm.used", context.llvm.usedFunctions + context.llvm.usedGlobals)
         appendLlvmUsed("llvm.compiler.used", context.llvm.compilerUsedGlobals)
@@ -327,7 +329,6 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         if (context.isNativeLibrary) {
             appendCAdapters()
         }
-
     }
 
     //-------------------------------------------------------------------------//
@@ -584,7 +585,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
     /**
      * The [CodeContext] enclosing the entire function body.
      */
-    private inner class FunctionScope (val declaration: IrFunction?, val functionGenerationContext: FunctionGenerationContext) : InnerScopeImpl() {
+    private inner class FunctionScope(val declaration: IrFunction?, val functionGenerationContext: FunctionGenerationContext) : InnerScopeImpl() {
 
 
         constructor(llvmFunction:LLVMValueRef, name:String, functionGenerationContext: FunctionGenerationContext):
@@ -596,6 +597,10 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         var llvmFunction: LLVMValueRef? = declaration?.let{
             codegen.llvmFunction(it)
         }
+
+
+        val coverageInstrumentation: LLVMCoverageInstrumentation? =
+                context.coverage.tryGetInstrumentation(declaration) { function, args -> functionGenerationContext.call(function, args) }
 
         private var name:String? = declaration?.name?.asString()
 
@@ -668,6 +673,7 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
                 val parameterScope = ParameterScope(declaration, functionGenerationContext)
                 using(parameterScope) {
                     using(VariableScope()) {
+                        recordCoverage(body)
                         when (body) {
                             is IrBlockBody -> body.statements.forEach { generateStatement(it) }
                             is IrExpressionBody -> generateStatement(body.expression)
@@ -748,10 +754,16 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
         }
     }
 
+    private fun recordCoverage(irElement: IrElement) {
+        // TODO: Maybe? Less? Question? Marks? Somehow???
+        (currentCodeContext.functionScope() as? FunctionScope)?.coverageInstrumentation?.instrumentIrElement(irElement)
+    }
+
     //-------------------------------------------------------------------------//
 
     private fun evaluateExpression(value: IrExpression): LLVMValueRef {
         updateBuilderDebugLocation(value)
+        recordCoverage(value)
         when (value) {
             is IrTypeOperatorCall    -> return evaluateTypeOperator           (value)
             is IrCall                -> return evaluateCall                   (value)
