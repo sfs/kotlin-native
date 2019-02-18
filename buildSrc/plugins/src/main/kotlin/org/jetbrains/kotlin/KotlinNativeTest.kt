@@ -21,7 +21,7 @@ abstract class KonanTestRunner : DefaultTask() {
     var testLogger = RunnerLogger.SILENT
 
     @Input
-    lateinit var arguments: List<String>
+    lateinit var arguments: MutableList<String>
 
     @Input
     lateinit var executable: String
@@ -35,11 +35,11 @@ abstract class KonanTestRunner : DefaultTask() {
     override fun configure(config: Closure<*>): Task {
         super.configure(config)
         if (!::arguments.isInitialized) {
-            arguments = ArrayList()
+            arguments = mutableListOf()
         }
-        arguments += "--ktest_logger=$testLogger"
+        arguments.add("--ktest_logger=$testLogger")
         if (useFilter && ::source.isInitialized) {
-            arguments += "--ktest_filter=${source.convertToPattern()}"
+            arguments.add("--ktest_filter=${source.convertToPattern()}")
         }
         project.setDistDependencyFor(this)
         return this
