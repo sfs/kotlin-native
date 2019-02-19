@@ -142,9 +142,13 @@ open class KonanLocalTestRunner : KonanTestRunner() {
         }
 
         val result = stdOut + stdErr
-        val goldValueMismatch = ::goldValue.isInitialized && goldValue != result.replace(System.lineSeparator(), "\n")
+        val goldValueMismatch = !outputChecker(result.replace(System.lineSeparator(), "\n"))
         if (goldValueMismatch) {
-            val message = "Expected output: $goldValue, actual output: $result"
+            val message = if (::goldValue.isInitialized)
+                "Expected output: $goldValue, actual output: $result"
+            else
+                "Actual output doesn't match with output checker: $result"
+
             check(expectedFail) { "Test failed. $message" }
             println("Expected failure. $message")
         }
