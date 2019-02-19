@@ -102,6 +102,12 @@ open class KonanLocalTestRunner : KonanTestRunner() {
     @Optional
     lateinit var goldValue: String
 
+    /**
+     * Checks test's output against gold value and returns true if the output matches the expectation
+     */
+    @Optional
+    var outputChecker: (String) -> Boolean = { str -> (::goldValue.isInitialized || goldValue == str) }
+
     @Optional
     lateinit var testData: String
 
