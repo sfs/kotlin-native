@@ -4,7 +4,6 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 
 import org.jetbrains.kotlin.konan.target.HostManager
-//import org.jetbrains.kotlin.gradle.plugin.konan.KonanArtifactContainer
 
 import java.io.File
 
@@ -18,11 +17,11 @@ fun Project.createStdlibTest(name: String, configure: (KonanGTestRunner) -> Unit
             useFilter = false
             testLogger = RunnerLogger.GTEST
 
-            // Configure also
+            // Configure with closure set in build.gradle
             configure(this)
 
             // Set dependencies.
-            val compileTask = "compileKonan${name.capitalize()}"
+            val compileTask = "compileKonan${name.capitalize()}${target.name.capitalize()}"
             dependsOn(compileTask)
             setDistDependencyFor(compileTask)
             finalizedBy("resultsTask")
@@ -53,7 +52,7 @@ fun Project.createStandaloneTest(name: String, configure: (KonanStandaloneTestRu
                     ?: throw RuntimeException("Output directory testOutputLocal is not set")
             val target = project.testTarget()
 
-            // Configure
+            // Configure with closure set in build.gradle
             configure(this)
 
             // Set executable for the runner.
@@ -61,7 +60,7 @@ fun Project.createStandaloneTest(name: String, configure: (KonanStandaloneTestRu
             executable = "$testOutput/${target.name}/$exeName.${target.family.exeSuffix}"
 
             // Set dependencies.
-            val compileTask = "compileKonan${exeName.capitalize()}"
+            val compileTask = "compileKonan${exeName.capitalize()}${target.name.capitalize()}"
             dependsOn(compileTask)
             setDistDependencyFor(compileTask)
             finalizedBy("resultsTask")

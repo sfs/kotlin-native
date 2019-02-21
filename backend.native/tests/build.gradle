@@ -200,7 +200,7 @@ task resultsTask() {
             statistics.add(it.statistics)
         }
         
-        tasks.withType(KonanStdlibTestRunner).matching {it.state.executed }.each {
+        tasks.withType(KonanGTestRunner).matching { it.state.executed }.each {
             statistics.add(it.statistics)
         }
 
@@ -3265,7 +3265,7 @@ task buildKonanTests { t ->
 
     // Set build dependencies.
     dependsOn compileKonanLocalTest
-    TasksKt.setDistDependencyFor(project, compileKonanLocalTest)
+    TasksKt.setDistDependencyFor(project, "compileKonanLocalTest${targetName.capitalize()}")
     // Local tests build into a single binary should depend on this task
     project.tasks.withType(KonanLocalTestRunner).forEach { it.dependsOn(t) }
 }
