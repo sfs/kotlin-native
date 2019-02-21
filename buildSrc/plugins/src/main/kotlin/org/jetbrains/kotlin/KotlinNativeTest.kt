@@ -6,6 +6,7 @@ import org.gradle.api.Task
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.language.base.plugins.LifecycleBasePlugin
 
 import java.util.regex.Pattern
 
@@ -32,8 +33,14 @@ abstract class KonanTestRunner : DefaultTask() {
     @Input
     var useFilter = true
 
+    @Suppress("UnstableApiUsage")
     override fun configure(config: Closure<*>): Task {
         super.configure(config)
+
+        // Set Gradle properties for the
+        group = LifecycleBasePlugin.VERIFICATION_GROUP
+        description = "Kotlin/Native test infrastructure task"
+
         if (!::arguments.isInitialized) {
             arguments = mutableListOf()
         }
@@ -53,9 +60,10 @@ abstract class KonanTestRunner : DefaultTask() {
 }
 
 /**
- * Task to run and parse output of stdlib tests
+ * Task to run tests compiled with TestRunner.
+ * Runs tests with GTEST output and parses it to create statistics info
  */
-open class KonanStdlibTestRunner : KonanTestRunner() {
+open class KonanGTestRunner : KonanTestRunner() {
     init {
         // Use GTEST logger to parse test results later
         testLogger = RunnerLogger.GTEST
@@ -106,15 +114,10 @@ open class KonanLocalTestRunner : KonanTestRunner() {
      * Checks test's output against gold value and returns true if the output matches the expectation
      */
     @Optional
-    var outputChecker: (String) -> Boolean = { str -> (::goldValue.isInitialized || goldValue == str) }
+    var outputChecker: (String) -> Boolean = { str -> (!::goldValue.isInitialized || goldValue == str) }
 
     @Optional
     lateinit var testData: String
-
-    override fun configure(config: Closure<*>): Task {
-        dependsOn("buildKonanTests")
-        return super.configure(config)
-    }
 
     @TaskAction
     override fun run() {
@@ -154,5 +157,12 @@ open class KonanLocalTestRunner : KonanTestRunner() {
         }
 
         check(!exitCodeMismatch && !goldValueMismatch && !expectedFail) { "Unexpected pass" }
+    }
+}
+
+open class KonanStandaloneTestRunner : KonanLocalTestRunner() {
+    override fun configure(config: Closure<*>): Task {
+        this.dependsOn("compileKonan${source.capitalize()}")
+        return super.configure(config)
     }
 }

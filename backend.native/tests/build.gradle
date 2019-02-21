@@ -162,8 +162,20 @@ TaskCollection<KonanTest> tasksOf(Closure<Boolean> filter) {
             .matching { filter(it) && it.enabled && (prefix != null ? it.name.startsWith(prefix) : true) }
 }
 
+Task createStandaloneTest(String name, Closure<KonanStandaloneTestRunner> configureClosure) {
+    return TasksKt.createStandaloneTest(project, name) { task ->
+        configureClosure(task)
+        konanArtifacts {
+            program(project.file(task.source).name.replace(".kt", ""), targets: [target.name ?: 'host']) {
+                srcFiles task.source
+                baseDir testOutputLocal
+            }
+        }
+    }
+}
+
 task executeTests {
-    dependsOn(tasksOf { it instanceof KonanTest && it.inDevelopersRun })
+//    dependsOn(tasksOf { it instanceof KonanTest && it.inDevelopersRun })
     dependsOn(project.tasks.withType(KonanLocalTestRunner))
     // Add framework tests
     dependsOn(project.tasks.withType(FrameworkTest))
@@ -175,7 +187,7 @@ task sanity {
     }
     dependsOn(tasksOf { it instanceof KonanTest && it.inDevelopersRun &&
             !it.getDependsOn().contains(':distPlatformLibs') })
-    dependsOn(tasksOf { it instanceof KonanStdlibTestRunner })
+    dependsOn(tasksOf { it instanceof KonanGTestRunner })
 }
 
 // Collect results in one json.
@@ -261,7 +273,7 @@ task run_external () {
     createTestTasks(externalTestsDir, RunExternalTestGroup) { }
 
     // Set up dependencies.
-    dependsOn(tasksOf { it instanceof RunExternalTestGroup || it instanceof KonanStdlibTestRunner })
+    dependsOn(tasksOf { it instanceof RunExternalTestGroup || it instanceof KonanGTestRunner })
 }
 
 task daily() {
@@ -317,8 +329,8 @@ task objectInitialization1(type: KonanLocalTestRunner) {
     source = "codegen/object/initialization1.kt"
 }
 
-task object_globalInitializer(type: RunStandaloneKonanTest) {
-    source = "codegen/object/globalInitializer.kt"
+createStandaloneTest("object_globalInitializer") {
+    it.source = "codegen/object/globalInitializer.kt"
 }
 
 task check_type(type: KonanLocalTestRunner) {
@@ -343,7 +355,6 @@ task aritmetic(type: KonanLocalTestRunner) {
 
 task sum1(type: KonanLocalTestRunner) {
     source = "codegen/function/sum_foo_bar.kt"
-
 }
 
 task sum2(type: KonanLocalTestRunner) {
@@ -3130,10 +3141,10 @@ task library_mismatch(type: RunStandaloneKonanTest) {
     goldValue = isWindows() ? messages.replaceAll('\\/', '\\\\') : messages
 }
 
-if (isAppleTarget(project)) {
-    def target = ext.platformManager.targetByName(project.testTarget ?: 'host')
-    def targetName = target.name
+def target = ext.platformManager.targetByName(project.testTarget ?: 'host')
+def targetName = target.name
 
+if (isAppleTarget(project)) {
     task testValuesFramework(type: FrameworkTest) {
         frameworkName = 'Values'
         konanArtifacts {
@@ -3206,7 +3217,6 @@ TasksKt.createStdlibTest(project, 'harmonyRegexTest') { task ->
     }
 }
 
-
 TasksKt.createStdlibTest(project, 'stdlibTest') { task ->
     def sources = getFilesFrom([ 'build/stdlib_external/stdlib', 'stdlib_external/utils.kt',
                                  'stdlib_external/jsCollectionFactoriesActuals.kt' ],
@@ -3224,8 +3234,11 @@ TasksKt.createStdlibTest(project, 'stdlibTest') { task ->
     task.arguments = [ "--ktest_negative_regex_filter=test.collections.CollectionTest.abstractCollectionToArray" ]
 }
 
-task buildKonanTests {
-    def compileList = [ "codegen",  "datagen", "lower", "runtime", "serialization"]
+/**
+ * Builds tests into a single binary with TestRunner
+ */
+task buildKonanTests { t ->
+    def compileList = [ "codegen",  "datagen", "lower", "runtime", "serialization" ]
 
     // These tests should not be built into the TestRunner's test executable
     def excludeList = ["codegen/inline/returnLocalClassFromBlock.kt"]
@@ -3250,6 +3263,9 @@ task buildKonanTests {
         }
     }
 
+    // Set build dependencies.
     dependsOn compileKonanLocalTest
     TasksKt.setDistDependencyFor(project, compileKonanLocalTest)
+    // Local tests build into a single binary should depend on this task
+    project.tasks.withType(KonanLocalTestRunner).forEach { it.dependsOn(t) }
 }
