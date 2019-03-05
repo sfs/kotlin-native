@@ -17,7 +17,7 @@ Kotlin/Native has a code coverage support that is based on Clang's
 kotlinc-native main.kt -Xcoverage
 ./program.kexe
 llvm-profdata merge default.profraw -o program.profdata
-llvm-cov report program.kexe -instr-profile program.profdata`
+llvm-cov report program.kexe -instr-profile program.profdata
 ```
 
 #### Compiling with coverage enabled
