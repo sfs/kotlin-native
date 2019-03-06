@@ -3220,10 +3220,8 @@ task coverage_basic_program(type: RunStandaloneKonanTest) {
 
     def dir = buildDir.absolutePath
     createOutputDirectory()
-
-    environment "LLVM_PROFILE_FILE", "$dir/program.profraw"
-
-    flags = ["-Xcoverage", "-entry", "coverage.basic.program.main"]
+    
+    flags = ["-Xcoverage-file=$dir/program.profraw", "-Xcoverage", "-entry", "coverage.basic.program.main"]
     source = "$projectDir/coverage/basic/program/main.kt"
 
     doLast {
@@ -3257,10 +3255,8 @@ task coverage_basic_library(type: RunStandaloneKonanTest) {
         def konanc = "$dist/bin/$konancScript"
         "$konanc $projectDir/coverage/basic/library/library.kt -p library -o $dir/lib_to_cover".execute().waitFor()
     }
-
-    environment "LLVM_PROFILE_FILE", "$dir/program.profraw"
     
-    flags = ["-l", "$dir/lib_to_cover", "-Xlibrary-to-cover=$dir/lib_to_cover.klib", "-entry", "coverage.basic.library.main"]
+    flags = ["-Xcoverage-file=$dir/program.profraw", "-l", "$dir/lib_to_cover", "-Xlibrary-to-cover=$dir/lib_to_cover.klib", "-entry", "coverage.basic.library.main"]
     source = "$projectDir/coverage/basic/library/main.kt"
 
     doLast {
