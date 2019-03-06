@@ -168,9 +168,12 @@ class K2NativeCompilerArguments : CommonCompilerArguments() {
     @Argument(
             value = "-Xlibrary-to-cover",
             valueDescription = "<path>",
-            description = "Path to library that should be covered. If no library is provided then compiler output is profiled instead."
+            description = "Path to library that should be covered."
     )
     var coveredLibraries: Array<String>? = null
+
+    @Argument(value = "-Xcoverage-file", valueDescription = "<path>", description = "Save coverage information to the given file")
+    var coverageFile: String? = null
 
     override fun configureAnalysisFlags(collector: MessageCollector): MutableMap<AnalysisFlag<*>, Any> =
             super.configureAnalysisFlags(collector).also {

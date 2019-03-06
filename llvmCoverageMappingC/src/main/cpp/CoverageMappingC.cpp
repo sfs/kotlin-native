@@ -15,6 +15,9 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Intrinsics.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Analysis/TargetLibraryInfo.h>
+#include <llvm/Transforms/Instrumentation.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Path.h>
 #include <string>
@@ -209,4 +212,16 @@ LLVMValueRef LLVMInstrProfIncrement(LLVMModuleRef moduleRef) {
 LLVMValueRef LLVMCreatePGOFunctionNameVar(LLVMValueRef llvmFunction, const char *pgoFunctionName) {
     auto *fnPtr = cast<llvm::Function>(unwrap(llvmFunction));
     return wrap(createPGOFuncNameVar(*fnPtr, pgoFunctionName));
+}
+
+void LLVMAddInstrProfPass(LLVMPassManagerRef passManagerRef, const char* outputFileName) {
+    legacy::PassManagerBase *passManager = unwrap(passManagerRef);
+    InstrProfOptions options;
+    options.InstrProfileOutput = outputFileName;
+    passManager->add(createInstrProfilingLegacyPass(options));
+}
+
+LLVMTargetLibraryInfoRef LLVMGetTargetLibraryInfo(LLVMModuleRef moduleRef) {
+    auto* libraryInfo = new TargetLibraryInfoImpl(Triple(unwrap(moduleRef)->getTargetTriple()));
+    return reinterpret_cast<LLVMTargetLibraryInfoRef>(libraryInfo);
 }

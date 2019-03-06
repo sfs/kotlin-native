@@ -18,6 +18,8 @@
 # define __COVERAGE_MAPPING_C_H__
 
 #include <llvm-c/Core.h>
+#include <llvm-c/Target.h>
+
 
 # ifdef __cplusplus
 extern "C" {
@@ -81,6 +83,10 @@ LLVMValueRef LLVMInstrProfIncrement(LLVMModuleRef moduleRef);
  * Wrapper for llvm::createPGOFuncNameVar.
  */
 LLVMValueRef LLVMCreatePGOFunctionNameVar(LLVMValueRef llvmFunction, const char *pgoFunctionName);
+
+void LLVMAddInstrProfPass(LLVMPassManagerRef passManagerRef, const char* outputFileName);
+
+LLVMTargetLibraryInfoRef LLVMGetTargetLibraryInfo(LLVMModuleRef moduleRef);
 
 # ifdef __cplusplus
 }

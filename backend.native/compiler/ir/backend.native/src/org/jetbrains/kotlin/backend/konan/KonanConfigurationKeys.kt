@@ -110,6 +110,8 @@ class KonanConfigKeys {
                 = CompilerConfigurationKey.create("emit coverage info for sources")
         val LIBRARIES_TO_COVER: CompilerConfigurationKey<List<String>>
                 = CompilerConfigurationKey.create<List<String>>("libraries that should be covered")
+        val PROFRAW_PATH: CompilerConfigurationKey<String?>
+                = CompilerConfigurationKey.create("path to *.profraw coverage output")
     }
 }
 

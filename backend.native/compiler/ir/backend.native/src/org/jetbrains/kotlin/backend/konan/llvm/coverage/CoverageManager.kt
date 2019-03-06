@@ -1,5 +1,7 @@
 package org.jetbrains.kotlin.backend.konan.llvm.coverage
 
+import llvm.LLVMAddInstrProfPass
+import llvm.LLVMPassManagerRef
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.backend.konan.KonanConfigKeys
@@ -8,6 +10,7 @@ import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.konan.file.File
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.konan.util.removeSuffixIfPresent
@@ -26,6 +29,17 @@ internal class CoverageManager(val context: Context) {
                     .map { it.removeSuffixIfPresent(".klib") }
                     .toSet()
 
+    private val llvmProfileFilenameGlobal = "__llvm_profile_filename"
+
+    private val defaultOutputFilePath: String by lazy {
+        "${context.config.outputFile}.profraw"
+    }
+
+    private val outputFileName: String =
+            context.config.configuration.get(KonanConfigKeys.PROFRAW_PATH)
+                    ?.let { File(it).absolutePath }
+                    ?: defaultOutputFilePath
+
     val enabled: Boolean =
             shouldCoverProgram || librariesToCover.isNotEmpty()
 
@@ -37,7 +51,9 @@ internal class CoverageManager(val context: Context) {
 
     private fun checkRestrictions(): Boolean  {
         val kind = context.config.configuration.get(KonanConfigKeys.PRODUCE)
-        return context.config.target == KonanTarget.MACOS_X64 && kind == CompilerOutputKind.PROGRAM
+        val isKindAllowed = kind == CompilerOutputKind.PROGRAM || kind == CompilerOutputKind.BITCODE
+        val isTargetAllowed = context.config.target == KonanTarget.MACOS_X64
+        return context.config.target == KonanTarget.MACOS_X64 && isKindAllowed && isTargetAllowed
     }
 
     private val filesRegionsInfo = mutableListOf<FileRegionInfo>()
@@ -83,4 +99,24 @@ internal class CoverageManager(val context: Context) {
             LLVMCoverageWriter(context, filesRegionsInfo).write()
         }
     }
+
+    /**
+     * Add InstrProfilingLegacyPass to the list of llvm passes
+     */
+    fun addLlvmPasses(passManager: LLVMPassManagerRef) {
+        if (enabled) {
+            LLVMAddInstrProfPass(passManager, outputFileName)
+        }
+    }
+
+    /**
+     * Since we performing instruction profiling before internalization and global dce
+     * __llvm_profile_filename need to be added to exported symbols.
+     */
+    fun addExportedSymbols(): List<String> =
+        if (enabled) {
+             listOf(llvmProfileFilenameGlobal)
+        } else {
+            emptyList()
+        }
 }
