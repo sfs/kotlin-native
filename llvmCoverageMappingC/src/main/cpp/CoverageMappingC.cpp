@@ -1,5 +1,7 @@
-// TODO: LICENSE
-
+/*
+ * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the LICENSE file.
+ */
 #include <CoverageMappingC.h>
 
 #include "CoverageMappingC.h"
@@ -99,104 +101,95 @@ LLVMValueRef LLVMAddFunctionMappingRecord(LLVMContextRef context, const char *na
                                                std::string{coverageMapping.coverageData, coverageMapping.size}));
 }
 
-static std::string normalizeFilename(StringRef Filename) {
-    llvm::SmallString<256> Path(Filename);
-    llvm::sys::fs::make_absolute(Path);
-    llvm::sys::path::remove_dots(Path, true);
-    return Path.str().str();
-}
-
 // See https://github.com/llvm/llvm-project/blob/fa8fa044ec46b94e64971efa8852df0d58114062/clang/lib/CodeGen/CoverageMappingGen.cpp#L1335.
 // Please note that llvm/ProfileData/InstrProfData.inc refers to variable names of the function that includes it. So be careful with renaming.
-static llvm::GlobalVariable *emitCoverageGlobal(
+static llvm::GlobalVariable* emitCoverageGlobal(
         llvm::LLVMContext &Ctx,
         llvm::Module &module,
         std::vector<llvm::Constant *> &FunctionRecords,
-        llvm::SmallDenseMap<const char *, unsigned, 8> &FileEntries,
-        std::string &RawCoverageMappings,
-        llvm::StructType *FunctionRecordTy) {
+        const llvm::SmallVector<StringRef, 16> &FilenameRefs,
+        const std::string &RawCoverageMappings) {
+
     auto *Int32Ty = llvm::Type::getInt32Ty(Ctx);
 
-    // Create the filenames and merge them with coverage mappings
-    llvm::SmallVector<std::string, 16> FilenameStrs;
-    llvm::SmallVector<StringRef, 16> FilenameRefs;
-    FilenameStrs.resize(FileEntries.size());
-    FilenameRefs.resize(FileEntries.size());
-    for (const auto &Entry : FileEntries) {
-        auto I = Entry.second;
-        FilenameStrs[I] = normalizeFilename(Entry.first);
-        FilenameRefs[I] = FilenameStrs[I];
-    }
     std::string FilenamesAndCoverageMappings;
-    llvm::raw_string_ostream OS(FilenamesAndCoverageMappings);
-    CoverageFilenamesSectionWriter(FilenameRefs).write(OS);
-    OS << RawCoverageMappings;
+    llvm::raw_string_ostream outputStream(FilenamesAndCoverageMappings);
+    CoverageFilenamesSectionWriter(FilenameRefs).write(outputStream);
+    outputStream << RawCoverageMappings;
     size_t CoverageMappingSize = RawCoverageMappings.size();
-    size_t FilenamesSize = OS.str().size() - CoverageMappingSize;
-    // Append extra zeroes if necessary to ensure that the size of the filenames
-    // and coverage mappings is a multiple of 8.
-    if (size_t Rem = OS.str().size() % 8) {
-        CoverageMappingSize += 8 - Rem;
-        for (size_t I = 0, S = 8 - Rem; I < S; ++I)
-            OS << '\0';
-    }
-    auto *FilenamesAndMappingsVal =
-            llvm::ConstantDataArray::getString(Ctx, OS.str(), false);
+    size_t FilenamesSize = outputStream.str().size() - CoverageMappingSize;
 
+    // See https://llvm.org/docs/CoverageMappingFormat.html#llvm-ir-representation
+    //
+    // > Coverage mapping data which is an array of bytes. Zero paddings are added at the end to force 8 byte alignment.
+    //
+    if (size_t rem = outputStream.str().size() % 8) {
+        CoverageMappingSize += 8 - rem;
+        for (size_t i = 0; i < 8 - rem; ++i) {
+            outputStream << '\0';
+        }
+    }
+
+    StructType *functionRecordTy = getFunctionRecordTy(Ctx);
     // Create the deferred function records array
-    auto RecordsTy =
-            llvm::ArrayType::get(FunctionRecordTy, FunctionRecords.size());
-    auto RecordsVal = llvm::ConstantArray::get(RecordsTy, FunctionRecords);
+    auto functionRecordsTy = llvm::ArrayType::get(functionRecordTy, FunctionRecords.size());
+    auto functionRecordsVal = llvm::ConstantArray::get(functionRecordsTy, FunctionRecords);
 
     llvm::Type *CovDataHeaderTypes[] = {
 #define COVMAP_HEADER(Type, LLVMType, Name, Init) LLVMType,
 
 #include "llvm/ProfileData/InstrProfData.inc"
     };
-    auto CovDataHeaderTy =
-            llvm::StructType::get(Ctx, makeArrayRef(CovDataHeaderTypes));
+    auto CovDataHeaderTy = llvm::StructType::get(Ctx, makeArrayRef(CovDataHeaderTypes));
     llvm::Constant *CovDataHeaderVals[] = {
 #define COVMAP_HEADER(Type, LLVMType, Name, Init) Init,
 
 #include "llvm/ProfileData/InstrProfData.inc"
     };
-    auto CovDataHeaderVal = llvm::ConstantStruct::get(
-            CovDataHeaderTy, makeArrayRef(CovDataHeaderVals));
+    auto CovDataHeaderVal = llvm::ConstantStruct::get(CovDataHeaderTy, makeArrayRef(CovDataHeaderVals));
 
+    auto *filenamesAndMappingsVal = llvm::ConstantDataArray::getString(Ctx, outputStream.str(), false);
     // Create the coverage data record
-    llvm::Type *CovDataTypes[] = {CovDataHeaderTy, RecordsTy, FilenamesAndMappingsVal->getType()};
+    llvm::Type *CovDataTypes[] = {CovDataHeaderTy, functionRecordsTy, filenamesAndMappingsVal->getType()};
     auto CovDataTy = llvm::StructType::get(Ctx, makeArrayRef(CovDataTypes));
 
-    llvm::Constant *TUDataVals[] = {CovDataHeaderVal, RecordsVal, FilenamesAndMappingsVal};
+    llvm::Constant *TUDataVals[] = {CovDataHeaderVal, functionRecordsVal, filenamesAndMappingsVal};
     auto CovDataVal = llvm::ConstantStruct::get(CovDataTy, makeArrayRef(TUDataVals));
 
-    return new llvm::GlobalVariable(
-            module, CovDataTy, true, llvm::GlobalValue::InternalLinkage,
+    return new llvm::GlobalVariable(module, CovDataTy, true, llvm::GlobalValue::InternalLinkage,
             CovDataVal, llvm::getCoverageMappingVarName());
+}
+
+static std::string createRawCoverageMapping(struct LLVMFunctionCoverage **functionCoverages, size_t functionCoveragesSize) {
+    std::vector<std::string> coverageMappings;
+    for (size_t i = 0; i < functionCoveragesSize; ++i) {
+        coverageMappings.emplace_back(std::string{(*functionCoverages[i]).coverageData, (*functionCoverages[i]).size});
+    }
+    return llvm::join(coverageMappings.begin(), coverageMappings.end(), "");
 }
 
 LLVMValueRef LLVMCoverageEmit(LLVMModuleRef moduleRef,
         LLVMValueRef *records, size_t recordsSize,
         const char **filenames, int *filenamesIndices, size_t filenamesSize,
         struct LLVMFunctionCoverage **functionCoverages, size_t functionCoveragesSize) {
-    LLVMContext &Ctx = *unwrap(LLVMGetModuleContext(moduleRef));
+    LLVMContext &ctx = *unwrap(LLVMGetModuleContext(moduleRef));
     Module &module = *unwrap(moduleRef);
 
     std::vector<Constant *> functionRecords;
     for (size_t i = 0; i < recordsSize; ++i) {
         functionRecords.push_back(dyn_cast<Constant>(unwrap(records[i])));
     }
-    SmallDenseMap<const char *, unsigned, 8> fileEntries;
+    llvm::SmallVector<StringRef, 16> filenameRefs;
+    filenameRefs.resize(filenamesSize);
     for (size_t i = 0; i < filenamesSize; ++i) {
-        fileEntries.insert(std::make_pair(filenames[i], filenamesIndices[i]));
+        llvm::SmallString<256> path(filenames[i]);
+        llvm::sys::fs::make_absolute(path);
+        llvm::sys::path::remove_dots(path, true);
+        filenameRefs[filenamesIndices[i]] = path.str();
     }
-    std::vector<std::string> coverageMappings;
-    for (size_t i = 0; i < functionCoveragesSize; ++i) {
-        coverageMappings.emplace_back(std::string{(*functionCoverages[i]).coverageData, (*functionCoverages[i]).size});
-    }
-    StructType *FunctionRecordTy = getFunctionRecordTy(Ctx);
-    std::string RawCoverageMappings = llvm::join(coverageMappings.begin(), coverageMappings.end(), "");
-    GlobalVariable *coverageGlobal = emitCoverageGlobal(Ctx, module, functionRecords, fileEntries, RawCoverageMappings, FunctionRecordTy);
+
+    const std::string &rawCoverageMappings = createRawCoverageMapping(functionCoverages, functionCoveragesSize);
+    GlobalVariable *coverageGlobal = emitCoverageGlobal(ctx, module, functionRecords, filenameRefs, rawCoverageMappings);
 
     const std::string &section = getInstrProfSectionName(IPSK_covmap, Triple(module.getTargetTriple()).getObjectFormat());
     coverageGlobal->setSection(section);

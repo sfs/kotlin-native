@@ -147,7 +147,6 @@ private class IrFunctionRegionsCollector(
     }
 
     private fun collectReturn(irReturn: IrReturn) {
-//            recordRegion(irReturn)
         collectRegions(irReturn.value)
     }
 
