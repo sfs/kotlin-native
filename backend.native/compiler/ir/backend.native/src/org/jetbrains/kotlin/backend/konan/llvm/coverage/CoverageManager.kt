@@ -9,6 +9,7 @@ import llvm.LLVMPassManagerRef
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.backend.konan.Context
 import org.jetbrains.kotlin.backend.konan.KonanConfigKeys
+import org.jetbrains.kotlin.backend.konan.isNativeBinary
 import org.jetbrains.kotlin.backend.konan.reportCompilationError
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.ir.declarations.IrFile
@@ -49,13 +50,12 @@ internal class CoverageManager(val context: Context) {
 
     init {
         if (enabled && !checkRestrictions()) {
-            context.reportCompilationError("Coverage is only supported for macOS executables for now.")
+            context.reportCompilationError("Coverage is only supported for macOS and iOS simulator binaries for now.")
         }
     }
 
     private fun checkRestrictions(): Boolean  {
-        val kind = context.config.configuration.get(KonanConfigKeys.PRODUCE)
-        val isKindAllowed = kind == CompilerOutputKind.PROGRAM || kind == CompilerOutputKind.BITCODE
+        val isKindAllowed = context.config.produce.isNativeBinary
         val target = context.config.target
         val isTargetAllowed = target == KonanTarget.MACOS_X64 || target == KonanTarget.IOS_X64
         return isKindAllowed && isTargetAllowed

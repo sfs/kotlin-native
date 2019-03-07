@@ -6,7 +6,7 @@ Kotlin/Native has a code coverage support that is based on Clang's
 1. Coverage support is in it's very early days and is in active development. Known issues and restrictions are:
     * Coverage information may be inaccurate.
     * Line execution counts may be wrong.
-    * Only macOS executables are supported.
+    * Only macOS and iOS simulator binaries are supported.
 
 2. Most of described functionality will be incorporated into Gradle plugin.
 
@@ -16,7 +16,7 @@ Kotlin/Native has a code coverage support that is based on Clang's
 ```bash
 kotlinc-native main.kt -Xcoverage
 ./program.kexe
-llvm-profdata merge default.profraw -o program.profdata
+llvm-profdata merge program.kexe.profraw -o program.profdata
 llvm-cov report program.kexe -instr-profile program.profdata
 ```
 
@@ -29,11 +29,12 @@ Note that library also should be linked via `-library/-l` compiler option.
 
 #### Running covered executable
 
-After the execution of the compiled binary (ex. `program.kexe`) `default.profraw` 
-will be generated. By default it is generated in the current working directory. `LLVM_PROFILE_DIR` environment variable 
-may be used to override the output path for `*.profraw` file. So if you run your program like this:
+After the execution of the compiled binary (ex. `program.kexe`) `program.kexe.profraw` will be generated.
+By default it will be generated in the same location where binary was created. The are two ways to override this behavior:
+ * `-Xcoverage-file=<path>` compiler flag.
+ * `LLVM_PROFILE_FILE` environment variable. So if you run your program like this:
 ```
-$LLVM_PROFILE_DIR=build/program.profraw ./program.kexe
+LLVM_PROFILE_FILE=build/program.profraw ./program.kexe
 ```
 Then the coverage information will be stored to the `build` dir as `program.profraw`.
 
@@ -51,7 +52,7 @@ The last step is to create a report from the `program.profdata` file.
 It can be done with `llvm-cov` utility (refer to [command guide](http://llvm.org/docs/CommandGuide/llvm-cov.html) for detailed usage).
 For example, we can see a basic report using:  
 ```
-llvm-cov report program.kexe -instr-profile program.profdata`
+llvm-cov report program.kexe -instr-profile program.profdata
 ``` 
 Or show a line-by-line coverage information in html:  
 ```
