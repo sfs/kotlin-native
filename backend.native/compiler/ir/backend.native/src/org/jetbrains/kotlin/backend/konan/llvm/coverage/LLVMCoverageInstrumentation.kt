@@ -45,7 +45,8 @@ internal class LLVMCoverageInstrumentation(
 
     // Each profiled function should have a global with its name in a specific format.
     private fun createFunctionNameGlobal(function: IrFunction): LLVMValueRef {
-        val pgoFunctionName = LLVMCreatePGOFunctionNameVar(function.llvmFunction, function.symbolName)!!
+        val name = context.llvmDeclarations.forFunction(function).llvmFunction.name
+        val pgoFunctionName = LLVMCreatePGOFunctionNameVar(function.llvmFunction, name)!!
         return LLVMConstBitCast(pgoFunctionName, int8TypePtr)!!
     }
 }

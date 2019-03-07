@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.backend.konan.llvm.coverage
 import kotlinx.cinterop.*
 import llvm.*
 import org.jetbrains.kotlin.backend.konan.Context
+import org.jetbrains.kotlin.backend.konan.llvm.name
 import org.jetbrains.kotlin.backend.konan.llvm.symbolName
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.name
@@ -55,8 +56,9 @@ internal class LLVMCoverageWriter(
                         fileIds.toCValues(), fileIds.size.signExtend(),
                         regions.toCValues(), regions.size.signExtend())
 
+                val functionName = context.llvmDeclarations.forFunction(functionRegions.function).llvmFunction.name
                 val functionMappingRecord = LLVMAddFunctionMappingRecord(LLVMGetModuleContext(context.llvmModule),
-                        functionRegions.function.symbolName, functionRegions.structuralHash, functionCoverage)!!
+                        functionName, functionRegions.structuralHash, functionCoverage)!!
 
                 Pair(functionMappingRecord, functionCoverage)
             }.unzip()

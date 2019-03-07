@@ -133,14 +133,20 @@ open class MacOSBasedLinker(targetProperties: AppleConfigurables)
     private val libtool = "$absoluteTargetToolchain/usr/bin/libtool"
     private val linker = "$absoluteTargetToolchain/usr/bin/ld"
     private val dsymutil = "$absoluteLlvmHome/bin/llvm-dsymutil"
+
     private fun provideCompilerRtLibrary(libraryName: String): String? {
-        val suffix = when (val family = configurables.target.family) {
-            Family.OSX -> "osx"
-            Family.IOS -> "ios"
-            else -> error("Family $family is unsupported")
+        val suffix = if (libraryName.isNotEmpty() && target == KonanTarget.IOS_X64) {
+            "iossim"
+        } else {
+            when (val family = configurables.target.family) {
+                Family.OSX -> "osx"
+                Family.IOS -> "ios"
+                else -> error("Family $family is unsupported")
+            }
         }
         val dir = File("$absoluteTargetToolchain/usr/lib/clang/").listFiles.firstOrNull()?.absolutePath
         val mangledName = if (libraryName.isEmpty()) "" else "${libraryName}_"
+
         return if (dir != null) "$dir/lib/darwin/libclang_rt.$mangledName$suffix.a" else null
     }
 

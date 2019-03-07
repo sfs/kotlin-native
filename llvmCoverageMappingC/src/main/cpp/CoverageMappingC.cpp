@@ -182,21 +182,21 @@ LLVMValueRef LLVMCoverageEmit(LLVMModuleRef moduleRef,
     LLVMContext &Ctx = *unwrap(LLVMGetModuleContext(moduleRef));
     Module &module = *unwrap(moduleRef);
 
-    std::vector<Constant *> FunctionRecords;
+    std::vector<Constant *> functionRecords;
     for (size_t i = 0; i < recordsSize; ++i) {
-        FunctionRecords.push_back(dyn_cast<Constant>(unwrap(records[i])));
+        functionRecords.push_back(dyn_cast<Constant>(unwrap(records[i])));
     }
-    SmallDenseMap<const char *, unsigned, 8> FileEntries;
+    SmallDenseMap<const char *, unsigned, 8> fileEntries;
     for (size_t i = 0; i < filenamesSize; ++i) {
-        FileEntries.insert(std::make_pair(filenames[i], filenamesIndices[i]));
+        fileEntries.insert(std::make_pair(filenames[i], filenamesIndices[i]));
     }
-    std::vector<std::string> CoverageMappings;
+    std::vector<std::string> coverageMappings;
     for (size_t i = 0; i < functionCoveragesSize; ++i) {
-        CoverageMappings.emplace_back(std::string{(*functionCoverages[i]).coverageData, (*functionCoverages[i]).size});
+        coverageMappings.emplace_back(std::string{(*functionCoverages[i]).coverageData, (*functionCoverages[i]).size});
     }
     StructType *FunctionRecordTy = getFunctionRecordTy(Ctx);
-    std::string RawCoverageMappings = llvm::join(CoverageMappings.begin(), CoverageMappings.end(), "");
-    GlobalVariable *coverageGlobal = emitCoverageGlobal(Ctx, module, FunctionRecords, FileEntries, RawCoverageMappings, FunctionRecordTy);
+    std::string RawCoverageMappings = llvm::join(coverageMappings.begin(), coverageMappings.end(), "");
+    GlobalVariable *coverageGlobal = emitCoverageGlobal(Ctx, module, functionRecords, fileEntries, RawCoverageMappings, FunctionRecordTy);
 
     const std::string &section = getInstrProfSectionName(IPSK_covmap, Triple(module.getTargetTriple()).getObjectFormat());
     coverageGlobal->setSection(section);

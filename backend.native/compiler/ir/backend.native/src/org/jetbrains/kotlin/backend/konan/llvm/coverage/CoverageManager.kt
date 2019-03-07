@@ -56,8 +56,9 @@ internal class CoverageManager(val context: Context) {
     private fun checkRestrictions(): Boolean  {
         val kind = context.config.configuration.get(KonanConfigKeys.PRODUCE)
         val isKindAllowed = kind == CompilerOutputKind.PROGRAM || kind == CompilerOutputKind.BITCODE
-        val isTargetAllowed = context.config.target == KonanTarget.MACOS_X64
-        return context.config.target == KonanTarget.MACOS_X64 && isKindAllowed && isTargetAllowed
+        val target = context.config.target
+        val isTargetAllowed = target == KonanTarget.MACOS_X64 || target == KonanTarget.IOS_X64
+        return isKindAllowed && isTargetAllowed
     }
 
     private val filesRegionsInfo = mutableListOf<FileRegionInfo>()
