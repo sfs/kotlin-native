@@ -755,8 +755,10 @@ internal class CodeGeneratorVisitor(val context: Context, val lifetimes: Map<IrE
     }
 
     private fun recordCoverage(irElement: IrElement) {
-        // TODO: Maybe? Less? Question? Marks? Somehow???
-        (currentCodeContext.functionScope() as? FunctionScope)?.coverageInstrumentation?.instrumentIrElement(irElement)
+        val scope = currentCodeContext.functionScope()
+        if (scope is FunctionScope) {
+            scope.coverageInstrumentation?.instrumentIrElement(irElement)
+        }
     }
 
     //-------------------------------------------------------------------------//

@@ -148,9 +148,11 @@ open class MacOSBasedLinker(targetProperties: AppleConfigurables)
         provideCompilerRtLibrary("")
     }
 
+    // Code coverage requires this library.
     private val profileLibrary: String? by lazy {
         provideCompilerRtLibrary("profile")
     }
+
     private val osVersionMinFlags: List<String> by lazy {
         listOf(osVersionMinFlagLd, osVersionMin + ".0")
     }

@@ -1,3 +1,7 @@
+/*
+ * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * that can be found in the LICENSE file.
+ */
 package org.jetbrains.kotlin.backend.konan.llvm.coverage
 
 import llvm.LLVMConstBitCast
@@ -39,7 +43,7 @@ internal class LLVMCoverageInstrumentation(
         callSitePlacer(LLVMInstrProfIncrement(context.llvmModule)!!, args)
     }
 
-    // Each profiled function should have a global with it's name in a specific format.
+    // Each profiled function should have a global with its name in a specific format.
     private fun createFunctionNameGlobal(function: IrFunction): LLVMValueRef {
         val pgoFunctionName = LLVMCreatePGOFunctionNameVar(function.llvmFunction, function.symbolName)!!
         return LLVMConstBitCast(pgoFunctionName, int8TypePtr)!!

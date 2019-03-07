@@ -74,6 +74,7 @@ internal class LinkStage(val context: Context) {
         }
         command.addNonEmpty(platform.llvmLtoDynamicFlags)
         command.addNonEmpty(files)
+        // Prevent symbols from being deleted by DCE.
         command.addNonEmpty(exportedSymbols.map { "-exported-symbol=${mangleSymbol(it)}"} )
         runTool(command)
 
