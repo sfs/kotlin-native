@@ -25,7 +25,7 @@ llvm-cov report program.kexe -instr-profile program.profdata
 There are 2 compiler flags that allows to generate coverage information:
 * `-Xcoverage`. Generate coverage for immediate sources.
 * `-Xlibrary-to-cover=<path>`. Generate coverage for specified `klib`. 
-Note that library also should be linked via `-library/-l` compiler option.
+Note that library also should be either linked via `-library/-l` compiler option or be a transitive dependency.
 
 #### Running covered executable
 
