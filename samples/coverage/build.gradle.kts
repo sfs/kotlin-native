@@ -39,12 +39,12 @@ tasks.create("createCoverageReport") {
     description = "Create coverage report"
 
     doLast {
+        val testDebugBinary = kotlin.targets["macos"].let { it as KotlinNativeTarget }.binaries.getExecutable("test", "debug").outputFile
         exec {
-            commandLine("llvm-profdata", "merge", "default.profraw", "-o", "program.profdata")
+            commandLine("llvm-profdata", "merge", "$testDebugBinary.profraw", "-o", "$testDebugBinary.profdata")
         }
         exec {
-            val testDebugBinary = kotlin.targets["macos"].let { it as KotlinNativeTarget }.binaries.getExecutable("test", "debug").outputFile
-            commandLine("llvm-cov", "show", "$testDebugBinary", "-instr-profile", "program.profdata")
+            commandLine("llvm-cov", "show", "$testDebugBinary", "-instr-profile", "$testDebugBinary.profdata")
         }
     }
 }
