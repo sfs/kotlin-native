@@ -3214,7 +3214,7 @@ task runKonanRegexTests(type: RunKonanTest) {
 
 task coverage_basic_program(type: RunStandaloneKonanTest) {
     
-    disabled = getTarget(project).family != Family.OSX
+    disabled = getTarget(project) != KonanTarget.IOS_X64 && getTarget(project) != KonanTarget.MACOS_X64
 
     description = "Test that `-Xcoverage` generates correct __llvm_coverage information"
 
@@ -3243,7 +3243,7 @@ task coverage_basic_program(type: RunStandaloneKonanTest) {
 
 task coverage_basic_library(type: RunStandaloneKonanTest) {
 
-    disabled = getTarget(project).family != Family.OSX
+    disabled = getTarget(project) != KonanTarget.IOS_X64 && getTarget(project) != KonanTarget.MACOS_X64
 
     description = "Test that `-Xlibrary-to-cover` generates correct __llvm_coverage information"
 
