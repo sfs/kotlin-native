@@ -31,7 +31,7 @@ internal class CoverageManager(val context: Context) {
 
     private val librariesToCover: Set<String> =
             context.config.configuration.getList(KonanConfigKeys.LIBRARIES_TO_COVER)
-                    .map { it.removeSuffixIfPresent(".klib") }
+                    .map { File(it).absolutePath.removeSuffixIfPresent(".klib") }
                     .toSet()
 
     private val llvmProfileFilenameGlobal = "__llvm_profile_filename"
@@ -55,7 +55,7 @@ internal class CoverageManager(val context: Context) {
     }
 
     private fun checkRestrictions(): Boolean  {
-        val isKindAllowed = context.config.produce.isNativeBinary
+        val isKindAllowed = with(context.config.produce) { isNativeBinary || this == CompilerOutputKind.BITCODE }
         val target = context.config.target
         val isTargetAllowed = target == KonanTarget.MACOS_X64 || target == KonanTarget.IOS_X64
         return isKindAllowed && isTargetAllowed

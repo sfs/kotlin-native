@@ -182,12 +182,15 @@ LLVMValueRef LLVMCoverageEmit(LLVMModuleRef moduleRef,
     llvm::SmallVector<StringRef, 16> filenameRefs;
     filenameRefs.resize(filenamesSize);
     for (size_t i = 0; i < filenamesSize; ++i) {
-        llvm::SmallString<256> path(filenames[i]);
-        llvm::sys::fs::make_absolute(path);
-        llvm::sys::path::remove_dots(path, true);
-        filenameRefs[filenamesIndices[i]] = path.str();
+        if (sys::path::is_absolute(filenames[i])) {
+            filenameRefs[filenamesIndices[i]] = filenames[i];
+        } else {
+            SmallString<256> path(filenames[i]);
+            sys::fs::make_absolute(path);
+            sys::path::remove_dots(path, true);
+            filenameRefs[filenamesIndices[i]] = path;
+        }
     }
-
     const std::string &rawCoverageMappings = createRawCoverageMapping(functionCoverages, functionCoveragesSize);
     GlobalVariable *coverageGlobal = emitCoverageGlobal(ctx, module, functionRecords, filenameRefs, rawCoverageMappings);
 

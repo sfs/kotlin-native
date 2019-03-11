@@ -71,7 +71,6 @@ internal class LLVMCoverageWriter(
             functionCoverages.forEach { LLVMFunctionCoverageDispose(it.ptr) }
 
             retval
-
         }
         context.llvm.usedGlobals.add(coverageGlobal)
     }
